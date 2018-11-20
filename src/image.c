@@ -239,12 +239,15 @@ image **load_alphabet()
 void draw_detections(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes)
 {
     int i,j;
-
+    // printf("detect numbers: %d\n", num);
+    int count = 0; // count object numbers
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
         int class = -1;
         for(j = 0; j < classes; ++j){
-            if (dets[i].prob[j] > thresh){
+            // j == 0 --> person
+            if (dets[i].prob[j] > thresh && j == 0){
+                count++;
                 if (class < 0) {
                     strcat(labelstr, names[j]);
                     class = j;
@@ -255,6 +258,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
                 printf("%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
             }
         }
+        sprintf(labelstr, "detected persons: %d", count);  // show detected result in image
         if(class >= 0){
             int width = im.h * .006;
 
@@ -293,7 +297,8 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
                 image label = get_label(alphabet, labelstr, (im.h*.03));
-                draw_label(im, top + width, left, label, rgb);
+                // draw_label(im, top + width, left, label, rgb);
+                draw_label(im, 0 + width, 0, label, rgb);  // by muzhi
                 free_image(label);
             }
             if (dets[i].mask){
@@ -307,6 +312,9 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             }
         }
     }
+    printf("*******\n");
+    printf("numbers of person is: %d\n", count);
+    printf("*******\n");
 }
 
 void transpose_image(image im)

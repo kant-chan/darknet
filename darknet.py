@@ -114,6 +114,20 @@ predict_image = lib.network_predict_image
 predict_image.argtypes = [c_void_p, IMAGE]
 predict_image.restype = POINTER(c_float)
 
+# add draw_detections muzhi
+get_labels = lib.get_labels
+get_labels.argtypes = [c_char_p]
+get_labels.restype = POINTER(POINTER(c_char))
+
+load_alphabet = lib.load_alphabet
+load_alphabet.restype = POINTER(POINTER(IMAGE))
+
+draw_detections = lib.draw_detections
+draw_detections.argtypes = [IMAGE, POINTER(DETECTION), c_int, c_float, POINTER(POINTER(c_char)), POINTER(POINTER(IMAGE)), c_int]
+
+save_image = lib.save_image
+save_image.argtypes = [IMAGE, c_char_p]
+
 def classify(net, meta, im):
     out = predict_image(net, im)
     res = []
@@ -130,7 +144,6 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
     num = pnum[0]
     if (nms): do_nms_obj(dets, num, meta.classes, nms);
-
     res = []
     for j in range(num):
         for i in range(meta.classes):
@@ -141,16 +154,63 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     free_image(im)
     free_detections(dets, num)
     return res
-    
+
+def detect_and_draw(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45, name_list="data/coco.names"):
+    names = get_labels(name_list)
+    im = load_image(image, 0, 0)
+    num = c_int(0)
+    pnum = pointer(num)
+    predict_image(net, im)
+    dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
+    num = pnum[0]
+    alphabet = load_alphabet()
+    if nms:
+        do_nms_obj(dets, num, meta.classes, nms)
+    draw_detections(im, dets, num, thresh, names, alphabet, meta.classes)
+    # res = []
+    # for j in range(num):
+    #     for i in range(meta.classes):
+    #         if dets[j].prob[i] > 0:
+    #             b = dets[j].bbox
+    #             res.append((meta.names[i], dets[j].prob[i], (b.x, b.y, b.w, b.h)))
+    # res = sorted(res, key=lambda x: -x[1])
+    save_image(im, "predictions")
+    free_image(im)
+    free_detections(dets, num)
+
+def draw_detected(img, coords):
+    for co in coords:
+        coord = co[2]
+        left  = (coord[0]-coord[2]/2.)
+        right = (coord[0]+coord[2]/2.)
+        top   = (coord[1]-coord[3]/2.)
+        bot   = (coord[1]+coord[3]/2.)
+
+        if left < 0:
+            left = 0
+        if right > img.shape[1]-1:
+            right = img.shape[1]-1
+        if top < 0:
+            top = 0
+        if bot > img.shape[0]-1:
+            bot = img.shape[0]-1
+        print left, right, top, bot
+        draw_img = cv2.rectangle(img, (int(left), int(top)), (int(right), int(bot)), (255, 0, 0), 1)
+    return draw_img
+
 if __name__ == "__main__":
     #net = load_net("cfg/densenet201.cfg", "/home/pjreddie/trained/densenet201.weights", 0)
     #im = load_image("data/wolf.jpg", 0, 0)
     #meta = load_meta("cfg/imagenet1k.data")
     #r = classify(net, meta, im)
     #print r[:10]
-    net = load_net("cfg/tiny-yolo.cfg", "tiny-yolo.weights", 0)
+    net = load_net("cfg/yolov3.cfg", "yolov3.weights", 0)
     meta = load_meta("cfg/coco.data")
-    r = detect(net, meta, "data/dog.jpg")
-    print(r)
-    
+    # r = detect(net, meta, "data/person.jpg")
+    detect_and_draw(net, meta, "data/person.jpg")
+    # img = cv2.imread("data/person.jpg", 1)
+    # print img.shape
+    # r = draw_detected(img, r)
+    # cv2.imwrite('image.jpg', r)
+    # print r
 

@@ -142,15 +142,38 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     free_detections(dets, num)
     return res
     
+def draw_detected(img, coords):
+    for co in coords:
+        coord = co[2]
+        left  = (coord[0]-coord[2]/2.)
+        right = (coord[0]+coord[2]/2.)
+        top   = (coord[1]-coord[3]/2.)
+        bot   = (coord[1]+coord[3]/2.)
+
+        if left < 0:
+            left = 0
+        if right > img.shape[1]-1:
+            right = img.shape[1]-1
+        if top < 0:
+            top = 0
+        if bot > img.shape[0]-1:
+            bot = img.shape[0]-1
+        print left, right, top, bot
+        draw_img = cv2.rectangle(img, (int(left), int(top)), (int(right), int(bot)), (255, 0, 0), 1)
+    return draw_img
+
 if __name__ == "__main__":
     #net = load_net("cfg/densenet201.cfg", "/home/pjreddie/trained/densenet201.weights", 0)
     #im = load_image("data/wolf.jpg", 0, 0)
     #meta = load_meta("cfg/imagenet1k.data")
     #r = classify(net, meta, im)
     #print r[:10]
-    net = load_net("cfg/tiny-yolo.cfg", "tiny-yolo.weights", 0)
+    net = load_net("cfg/yolov3.cfg", "yolov3.weights", 0)
     meta = load_meta("cfg/coco.data")
-    r = detect(net, meta, "data/dog.jpg")
-    print(r)
-    
+    r = detect(net, meta, "data/person.jpg")
+    img = cv2.imread("data/person.jpg", 1)
+    print img.shape
+    r = draw_detected(img, r)
+    cv2.imwrite('image.jpg', r)
+    # print r
 

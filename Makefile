@@ -2,6 +2,7 @@ GPU=0
 CUDNN=0
 OPENCV=1
 OPENMP=0
+NUMPY=1
 DEBUG=0
 
 ARCH= -gencode arch=compute_30,code=sm_30 \
@@ -44,6 +45,11 @@ COMMON+= -DOPENCV
 CFLAGS+= -DOPENCV
 LDFLAGS+= `pkg-config --libs opencv` -lstdc++
 COMMON+= `pkg-config --cflags opencv` 
+endif
+
+ifeq ($(NUMPY), 1) 
+COMMON+= -DNUMPY -I/home/260249/.pyenv/versions/py_virtual_275/include/python2.7/ -I/home/260249/.pyenv/versions/2.7.5/envs/py_virtual_275/lib/python2.7/site-packages/numpy/core/include/numpy/
+CFLAGS+= -DNUMPY
 endif
 
 ifeq ($(GPU), 1) 

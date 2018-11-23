@@ -1,6 +1,7 @@
 from ctypes import *
 import math
 import random
+import cv2
 
 def sample(probs):
     s = sum(probs)
@@ -115,6 +116,11 @@ predict_image.argtypes = [c_void_p, IMAGE]
 predict_image.restype = POINTER(c_float)
 
 # add draw_detections muzhi
+
+ndarray_image = lib.ndarray_to_image
+ndarray_image.argtypes = [POINTER(c_ubyte), POINTER(c_long), POINTER(c_long)]
+ndarray_image.restype = IMAGE
+
 get_labels = lib.get_labels
 get_labels.argtypes = [c_char_p]
 get_labels.restype = POINTER(POINTER(c_char))
@@ -178,7 +184,32 @@ def detect_and_draw(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45, name_l
     free_image(im)
     free_detections(dets, num)
 
+def detect_np(net, meta, np_img, thresh=.5, hier_thresh=.5, nms=.45):
+    im = nparray_to_image(np_img)
+    num = c_int(0)
+    pnum = pointer(num)
+    predict_image(net, im)
+    dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
+    num = pnum[0]
+    if (nms): do_nms_obj(dets, num, meta.classes, nms);
+    res = []
+    for j in range(num):
+        for i in range(meta.classes):
+            if dets[j].prob[i] > 0 and i == 0:
+                b = dets[j].bbox
+                res.append((meta.names[i], dets[j].prob[i], (b.x, b.y, b.w, b.h)))
+    res = sorted(res, key=lambda x: -x[1])
+    free_image(im)
+    free_detections(dets, num)
+    return res
+def nparray_to_image(img):
+    data = img.ctypes.data_as(POINTER(c_ubyte))
+    image = ndarray_image(data, img.ctypes.shape, img.ctypes.strides)
+    return image
+
 def draw_detected(img, coords):
+    draw_img = img
+    count = len(coords) if len(coords) != 0 else 0
     for co in coords:
         coord = co[2]
         left  = (coord[0]-coord[2]/2.)
@@ -194,8 +225,9 @@ def draw_detected(img, coords):
             top = 0
         if bot > img.shape[0]-1:
             bot = img.shape[0]-1
-        print left, right, top, bot
+        # print left, right, top, bot
         draw_img = cv2.rectangle(img, (int(left), int(top)), (int(right), int(bot)), (255, 0, 0), 1)
+        cv2.putText(draw_img,'detected person(s): {}'.format(count), (0,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 1)
     return draw_img
 
 if __name__ == "__main__":
@@ -207,10 +239,10 @@ if __name__ == "__main__":
     net = load_net("cfg/yolov3.cfg", "yolov3.weights", 0)
     meta = load_meta("cfg/coco.data")
     # r = detect(net, meta, "data/person.jpg")
-    detect_and_draw(net, meta, "data/person.jpg")
-    # img = cv2.imread("data/person.jpg", 1)
-    # print img.shape
-    # r = draw_detected(img, r)
-    # cv2.imwrite('image.jpg', r)
-    # print r
+    # detect_and_draw(net, meta, "data/person.jpg")
+    img = cv2.imread("data/person.jpg", 1)
+    r = detect_np(net, meta, img)
+    di = draw_detected(img, r)
+    cv2.imwrite('image.jpg', di)
+    print r
 

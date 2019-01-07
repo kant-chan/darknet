@@ -226,8 +226,8 @@ def draw_detected(img, coords):
         if bot > img.shape[0]-1:
             bot = img.shape[0]-1
         # print left, right, top, bot
-        draw_img = cv2.rectangle(img, (int(left), int(top)), (int(right), int(bot)), (255, 0, 0), 1)
-        cv2.putText(draw_img,'detected person(s): {}'.format(count), (0,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 1)
+        draw_img = cv2.rectangle(img, (int(left), int(top)), (int(right), int(bot)), (255, 0, 0), 2)
+    cv2.putText(draw_img,'detected person(s): {}'.format(count), (0,40), cv2.FONT_HERSHEY_SIMPLEX, 1.4, (0,0,255), 2)
     return draw_img
 
 if __name__ == "__main__":
